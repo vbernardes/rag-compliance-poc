@@ -8,3 +8,4 @@ pymupdf>=1.24
 spacy>=3.7,<3.8
 streamlit>=1.35
 python-dotenv>=1.0
+langfuse>=2.0
