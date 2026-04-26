@@ -136,3 +136,7 @@ if user_query:
         )
 
     st.session_state.messages.append({"role": "assistant", "content": response, "sources": sources})
+
+    if langfuse_handler:
+        from langfuse import get_client
+        get_client().flush()
