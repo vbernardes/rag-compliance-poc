@@ -1,10 +1,11 @@
 import os
+import uuid
 import chromadb
 import streamlit as st
 from dotenv import load_dotenv
 from rag.ingest import ingest_pdf
 from rag.retriever import get_retriever
-from rag.chain import build_chain
+from rag.chain import build_chain, get_langfuse_handler
 from rag.embeddings import get_model_name
 
 load_dotenv()
@@ -34,6 +35,9 @@ if "messages" not in st.session_state:
 
 if "uploaded_names" not in st.session_state:
     st.session_state.uploaded_names = set()
+
+if "session_id" not in st.session_state:
+    st.session_state.session_id = str(uuid.uuid4())
 
 st.sidebar.title("Documents")
 
@@ -113,11 +117,22 @@ if user_query:
         for m in st.session_state.messages[:-1]
     )
 
-    sources = init_retriever().invoke(user_query)
+    langfuse_handler = get_langfuse_handler()
+    trace_config = {}
+    if langfuse_handler:
+        trace_config = {
+            "callbacks": [langfuse_handler],
+            "metadata": {
+                "langfuse_session_id": st.session_state.session_id,
+                "langfuse_tags": ["rag", "streamlit"],
+            },
+        }
+
+    sources = init_retriever().invoke(user_query, config=trace_config)
 
     with st.chat_message("assistant"):
         response = st.write_stream(
-            init_chain().stream({"question": user_query, "history": history})
+            init_chain().stream({"question": user_query, "history": history}, config=trace_config)
         )
 
     st.session_state.messages.append({"role": "assistant", "content": response, "sources": sources})

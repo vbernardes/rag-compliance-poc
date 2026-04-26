@@ -12,6 +12,17 @@ from langchain_ollama import ChatOllama
 load_dotenv()
 
 
+def get_langfuse_handler():
+    """Return a Langfuse CallbackHandler if credentials are configured, else None."""
+    if not (os.getenv("LANGFUSE_PUBLIC_KEY") and os.getenv("LANGFUSE_SECRET_KEY")):
+        return None
+    try:
+        from langfuse.langchain import CallbackHandler
+        return CallbackHandler()
+    except Exception:
+        return None
+
+
 def get_llm():
     provider = os.getenv("LLM_PROVIDER", "ollama")
     if provider == "ollama":
