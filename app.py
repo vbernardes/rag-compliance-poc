@@ -7,8 +7,10 @@ except ImportError:
     pass
 
 import os
+import shutil
 import uuid
 from datetime import datetime
+from pathlib import Path
 
 import chromadb
 import streamlit as st
@@ -33,6 +35,11 @@ UPLOADS_DIR = "./uploads"
 COMPLIANCE_CHROMA_DIR = os.getenv("CHROMA_COMPLIANCE_DIR", "./data/chroma_compliance")
 COMPLIANCE_COLLECTION = "compliance"
 COMPLIANCE_UPLOADS_DIR = "./uploads/compliance"
+
+# Bundled sample PDFs (relative to this file)
+_HERE = Path(__file__).parent
+DEMO_REGULATION_PDF = _HERE / "EU_AI_Act_sample.pdf"
+DEMO_POLICY_PDF = _HERE / "sample_ai_policy.pdf"
 
 os.makedirs(UPLOADS_DIR, exist_ok=True)
 os.makedirs(COMPLIANCE_UPLOADS_DIR, exist_ok=True)
@@ -89,6 +96,28 @@ if "compliance_report" not in st.session_state:
 st.sidebar.title("RAG PoC")
 
 with st.sidebar.expander("💬 Q&A Documents", expanded=True):
+    _qa_demo_col, _qa_dl_col = st.columns(2)
+    if _qa_demo_col.button("⚡ Load demo", key="qa_demo", help="Ingests the bundled EU AI Act sample PDF"):
+        if DEMO_REGULATION_PDF.exists() and DEMO_REGULATION_PDF.name not in st.session_state.uploaded_names:
+            dest = os.path.join(UPLOADS_DIR, DEMO_REGULATION_PDF.name)
+            shutil.copy(DEMO_REGULATION_PDF, dest)
+            n = ingest_pdf(dest, CHROMA_DIR, COLLECTION)
+            if n > 0:
+                st.success(f"{DEMO_REGULATION_PDF.name}: {n} chunks indexed")
+            else:
+                st.info(f"{DEMO_REGULATION_PDF.name}: already indexed")
+            st.session_state.uploaded_names.add(DEMO_REGULATION_PDF.name)
+        else:
+            st.info("Demo document already loaded.")
+    if DEMO_REGULATION_PDF.exists():
+        _qa_dl_col.download_button(
+            "⬇ Sample PDF",
+            data=DEMO_REGULATION_PDF.read_bytes(),
+            file_name=DEMO_REGULATION_PDF.name,
+            mime="application/pdf",
+            key="qa_dl",
+        )
+
     uploaded_files = st.file_uploader(
         "Upload PDFs", type="pdf", accept_multiple_files=True, key="qa_uploader"
     )
@@ -137,6 +166,44 @@ with st.sidebar.expander("💬 Q&A Documents", expanded=True):
         st.rerun()
 
 with st.sidebar.expander("⚖️ Compliance Check", expanded=False):
+    _comp_demo_col, _comp_dl_col = st.columns(2)
+    if _comp_demo_col.button("⚡ Load demo", key="comp_demo", help="Ingests EU AI Act (regulation) + sample AI policy"):
+        loaded = []
+        if DEMO_REGULATION_PDF.exists() and DEMO_REGULATION_PDF.name not in st.session_state.compliance_regulation_names:
+            dest = os.path.join(COMPLIANCE_UPLOADS_DIR, DEMO_REGULATION_PDF.name)
+            shutil.copy(DEMO_REGULATION_PDF, dest)
+            n = ingest_pdf(dest, COMPLIANCE_CHROMA_DIR, COMPLIANCE_COLLECTION, doc_role="regulation")
+            loaded.append(f"{DEMO_REGULATION_PDF.name}: {n} chunks" if n > 0 else f"{DEMO_REGULATION_PDF.name}: already indexed")
+            st.session_state.compliance_regulation_names.add(DEMO_REGULATION_PDF.name)
+        if DEMO_POLICY_PDF.exists() and DEMO_POLICY_PDF.name != st.session_state.compliance_policy_name:
+            dest = os.path.join(COMPLIANCE_UPLOADS_DIR, DEMO_POLICY_PDF.name)
+            shutil.copy(DEMO_POLICY_PDF, dest)
+            n = ingest_pdf(dest, COMPLIANCE_CHROMA_DIR, COMPLIANCE_COLLECTION, doc_role="policy")
+            loaded.append(f"{DEMO_POLICY_PDF.name}: {n} chunks" if n > 0 else f"{DEMO_POLICY_PDF.name}: already indexed")
+            st.session_state.compliance_policy_name = DEMO_POLICY_PDF.name
+            st.session_state.compliance_report = None
+        if loaded:
+            st.success("\n".join(loaded))
+        else:
+            st.info("Demo documents already loaded.")
+    with _comp_dl_col:
+        if DEMO_REGULATION_PDF.exists():
+            st.download_button(
+                "⬇ Regulation",
+                data=DEMO_REGULATION_PDF.read_bytes(),
+                file_name=DEMO_REGULATION_PDF.name,
+                mime="application/pdf",
+                key="comp_dl_reg",
+            )
+        if DEMO_POLICY_PDF.exists():
+            st.download_button(
+                "⬇ Policy",
+                data=DEMO_POLICY_PDF.read_bytes(),
+                file_name=DEMO_POLICY_PDF.name,
+                mime="application/pdf",
+                key="comp_dl_pol",
+            )
+
     st.markdown("**Regulation documents**")
     reg_files = st.file_uploader(
         "Upload regulation PDFs",
