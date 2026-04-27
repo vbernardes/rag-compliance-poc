@@ -7,7 +7,6 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate, HumanMessagePromptTemplate
 from langchain_core.runnables import RunnableParallel, RunnablePassthrough
 from langchain_mistralai import ChatMistralAI
-from langchain_ollama import ChatOllama
 
 load_dotenv()
 
@@ -24,10 +23,8 @@ def get_langfuse_handler():
 
 
 def get_llm():
-    provider = os.getenv("LLM_PROVIDER", "ollama")
-    if provider == "ollama":
-        return ChatOllama(model=os.getenv("OLLAMA_MODEL", "mistral-nemo"), temperature=0)
-    elif provider == "anthropic":
+    provider = os.getenv("LLM_PROVIDER", "mistral")
+    if provider == "anthropic":
         return ChatAnthropic(model="claude-sonnet-4-6", temperature=0)
     elif provider == "mistral":
         return ChatMistralAI(model=os.getenv("MISTRAL_MODEL", "open-mistral-nemo"), temperature=0)
