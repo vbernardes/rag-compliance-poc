@@ -6,16 +6,18 @@ from collections import Counter
 
 import chromadb
 import fitz
-import spacy
 from langchain_community.vectorstores import Chroma
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from rag.embeddings import get_embeddings, get_model_name
 
-_nlp = spacy.load("en_core_web_sm")
-
-_ENTITY_LABELS = {"PERSON", "ORG", "DATE", "GPE", "LOC"}
+try:
+    import spacy
+    _nlp = spacy.load("en_core_web_sm")
+    _ENTITY_LABELS = {"PERSON", "ORG", "DATE", "GPE", "LOC"}
+except Exception:
+    _nlp = None
 
 
 def ingest_pdf(
@@ -166,12 +168,13 @@ def ingest_pdf(
             all_docs.append(doc)
             chunk_index += 1
 
-    for doc in all_docs:
-        spacy_doc = _nlp(doc.page_content)
-        ents = [e for e in spacy_doc.ents if e.label_ in _ENTITY_LABELS]
-        doc.metadata["entities"] = json.dumps(
-            [{"text": e.text, "label": e.label_} for e in ents]
-        )
+    if _nlp is not None:
+        for doc in all_docs:
+            spacy_doc = _nlp(doc.page_content)
+            ents = [e for e in spacy_doc.ents if e.label_ in _ENTITY_LABELS]
+            doc.metadata["entities"] = json.dumps(
+                [{"text": e.text, "label": e.label_} for e in ents]
+            )
 
     if not all_docs:
         return 0
