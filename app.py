@@ -44,7 +44,7 @@ DEMO_POLICY_PDF = _HERE / "sample_ai_policy.pdf"
 os.makedirs(UPLOADS_DIR, exist_ok=True)
 os.makedirs(COMPLIANCE_UPLOADS_DIR, exist_ok=True)
 
-st.set_page_config(page_title="RAG PoC", layout="wide")
+st.set_page_config(page_title="Document Intelligence PoC", layout="wide")
 
 # --- Password gate (active only when APP_PASSWORD secret is set) ---
 _app_password = os.getenv("APP_PASSWORD")
@@ -93,7 +93,8 @@ if "compliance_report" not in st.session_state:
 
 # --- Sidebar ---
 
-st.sidebar.title("RAG PoC")
+st.sidebar.title("Document Intelligence PoC")
+st.sidebar.caption("Upload documents to enable Q&A or compliance checking.")
 
 with st.sidebar.expander("💬 Q&A Documents", expanded=True):
     _qa_demo_col, _qa_dl_col = st.columns(2)
@@ -268,12 +269,15 @@ with st.sidebar.expander("⚖️ Compliance Check", expanded=False):
 
 # --- Main tabs ---
 
-st.title("RAG PoC")
+st.title("Document Intelligence PoC")
+st.caption("Ask questions about your documents, or check a policy document against regulations.")
 tab_qa, tab_compliance = st.tabs(["💬 Q&A", "✅ Compliance Check"])
 
 # ── Q&A tab ──────────────────────────────────────────────────────────────────
 
 with tab_qa:
+    if not st.session_state.messages:
+        st.info("Upload PDFs in the sidebar, then ask any question about them. Answers will include source citations you can expand.")
     for msg in st.session_state.messages:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
@@ -333,6 +337,7 @@ with tab_qa:
 # ── Compliance tab ────────────────────────────────────────────────────────────
 
 with tab_compliance:
+    st.caption("Upload a regulation and a policy document in the sidebar, then run a check to see how well the policy covers each requirement.")
     comp_client_tab = chromadb.PersistentClient(path=COMPLIANCE_CHROMA_DIR)
     comp_col_tab = comp_client_tab.get_or_create_collection(COMPLIANCE_COLLECTION)
 
