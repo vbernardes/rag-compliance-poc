@@ -1,6 +1,7 @@
 .env
 .venv/
 data/chroma/
+data/chroma_compliance/
 uploads/
 __pycache__/
 *.pyc
