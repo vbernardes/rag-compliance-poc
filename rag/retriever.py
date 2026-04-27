@@ -6,14 +6,21 @@ from langchain_core.vectorstores import VectorStoreRetriever
 from rag.embeddings import get_embeddings
 
 
-def get_retriever(chroma_persist_dir: str, collection_name: str) -> VectorStoreRetriever:
+def get_retriever(
+    chroma_persist_dir: str,
+    collection_name: str,
+    where: dict = None,
+) -> VectorStoreRetriever:
     vectorstore = Chroma(
         collection_name=collection_name,
         embedding_function=get_embeddings(),
         persist_directory=chroma_persist_dir,
     )
     top_k = int(os.getenv("TOP_K", "5"))
+    search_kwargs = {"k": top_k, "fetch_k": 20}
+    if where:
+        search_kwargs["filter"] = where
     return vectorstore.as_retriever(
         search_type="mmr",
-        search_kwargs={"k": top_k, "fetch_k": 20},
+        search_kwargs=search_kwargs,
     )
