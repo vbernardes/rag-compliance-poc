@@ -1,3 +1,11 @@
+# Streamlit Cloud ships an old SQLite; swap in pysqlite3 when available.
+try:
+    __import__("pysqlite3")
+    import sys
+    sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
+except ImportError:
+    pass
+
 import os
 import uuid
 from datetime import datetime
@@ -30,6 +38,20 @@ os.makedirs(UPLOADS_DIR, exist_ok=True)
 os.makedirs(COMPLIANCE_UPLOADS_DIR, exist_ok=True)
 
 st.set_page_config(page_title="RAG PoC", layout="wide")
+
+# --- Password gate (active only when APP_PASSWORD secret is set) ---
+_app_password = os.getenv("APP_PASSWORD")
+if _app_password:
+    if not st.session_state.get("authenticated"):
+        st.title("RAG PoC — Demo Access")
+        _pwd = st.text_input("Enter demo password:", type="password")
+        if st.button("Continue"):
+            if _pwd == _app_password:
+                st.session_state.authenticated = True
+                st.rerun()
+            else:
+                st.error("Incorrect password.")
+        st.stop()
 
 
 @st.cache_resource
