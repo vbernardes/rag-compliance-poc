@@ -18,10 +18,16 @@ _nlp = spacy.load("en_core_web_sm")
 _ENTITY_LABELS = {"PERSON", "ORG", "DATE", "GPE", "LOC"}
 
 
-def ingest_pdf(file_path: str, chroma_persist_dir: str, collection_name: str) -> int:
+def ingest_pdf(
+    file_path: str,
+    chroma_persist_dir: str,
+    collection_name: str,
+    doc_role: str = "knowledge",
+) -> int:
     """
     Ingest a PDF into ChromaDB. Returns number of chunks added.
     Returns 0 if the file is already indexed (deduplication by filename).
+    doc_role tags each chunk: "knowledge" (Q&A default), "regulation", or "policy".
     """
     client = chromadb.PersistentClient(path=chroma_persist_dir)
     collection = client.get_or_create_collection(collection_name)
@@ -153,6 +159,7 @@ def ingest_pdf(file_path: str, chroma_persist_dir: str, collection_name: str) ->
                     "section_title": page["section_title"] or "",
                     "section_path": page["section_path"] or "",
                     "doc_title": doc_title,
+                    "doc_role": doc_role,
                     "entities": "[]",
                 },
             )
